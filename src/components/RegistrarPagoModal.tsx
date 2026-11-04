@@ -7,6 +7,7 @@ import type { MetodoPago, Pago } from '../types/Pago';
 
 const TEAL = '#0F766E';
 const AVISO = '#B45309';
+const DANGER = '#B91C1C';
 const MAX_REFERENCIA = 50; // mismo límite que la columna referencia_pago
 
 // La ayuda de cada método existe porque los cobradores confunden transferencia con depósito al capturar.
@@ -63,7 +64,9 @@ export default function RegistrarPagoModal({
   onClose,
   onRegistered,
 }: RegistrarPagoModalProps) {
+  // Aviso (naranja): la referencia ya está en OTRO crédito. Bloqueo (rojo): ya está en ESTE crédito.
   const [advertenciaReferencia, setAdvertenciaReferencia] = useState<string | null>(null);
+  const [bloqueoReferencia, setBloqueoReferencia] = useState<string | null>(null);
 
   const {
     register,
@@ -80,16 +83,31 @@ export default function RegistrarPagoModal({
   const metodoActual = METODOS.find((m) => m.valor === metodoPago) ?? METODOS[0];
   const pideReferencia = metodoPago !== 'EFECTIVO';
 
-  // Aviso de posible duplicado: la misma referencia ya está en un abono activo. No bloquea el registro,
-  // porque dos pagos legítimos podrían compartir folio; solo le pide al cobrador que lo verifique.
+  // Revisa la referencia contra los abonos activos. En este mismo crédito se bloquea (casi seguro es el mismo
+  // comprobante capturado dos veces); en otro crédito solo se avisa, porque un cliente puede pagar dos
+  // créditos con una sola transferencia. El backend aplica la misma regla, esto solo lo muestra antes.
+  const limpiarAvisos = () => {
+    setAdvertenciaReferencia(null);
+    setBloqueoReferencia(null);
+  };
+
   const verificarReferencia = async (valor: string) => {
     const referencia = valor.trim();
     if (!referencia) {
-      setAdvertenciaReferencia(null);
+      limpiarAvisos();
       return;
     }
     try {
       const creditos = await pagoService.referenciaExistente(referencia);
+      if (creditos.includes(creditoId)) {
+        setAdvertenciaReferencia(null);
+        setBloqueoReferencia(
+          'Esta referencia ya está registrada en este mismo crédito. ' +
+            'No se puede capturar dos veces el mismo comprobante.'
+        );
+        return;
+      }
+      setBloqueoReferencia(null);
       if (creditos.length === 0) {
         setAdvertenciaReferencia(null);
         return;
@@ -100,11 +118,12 @@ export default function RegistrarPagoModal({
           'Verifica que no sea un pago duplicado.'
       );
     } catch {
-      setAdvertenciaReferencia(null); // si falla la consulta, no se estorba el registro
+      limpiarAvisos(); // si falla la consulta, no se estorba el registro; el backend igual valida
     }
   };
 
   const onSubmit = async (data: PagoFormValues) => {
+    if (bloqueoReferencia) return; // el botón ya está deshabilitado; por si se envía con Enter
     try {
       const pagosCreados = await pagoService.registrar({
         creditoId,
@@ -179,7 +198,7 @@ export default function RegistrarPagoModal({
             </label>
             <select
               id="metodoPago"
-              {...register('metodoPago', { onChange: () => setAdvertenciaReferencia(null) })}
+              {...register('metodoPago', { onChange: limpiarAvisos })}
               className={`${claseCampo} bg-white`}
             >
               {METODOS.map((m) => (
@@ -203,12 +222,20 @@ export default function RegistrarPagoModal({
                 maxLength={MAX_REFERENCIA}
                 {...register('referenciaPago', {
                   onBlur: (e) => verificarReferencia(e.target.value),
-                  onChange: () => setAdvertenciaReferencia(null),
+                  onChange: limpiarAvisos,
                 })}
                 className={claseCampo}
               />
               {errors.referenciaPago && (
                 <p className="mt-1 text-xs text-[#B91C1C]">{errors.referenciaPago.message}</p>
+              )}
+              {bloqueoReferencia && (
+                <p
+                  className="mt-2 rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-xs"
+                  style={{ color: DANGER }}
+                >
+                  {bloqueoReferencia}
+                </p>
               )}
               {advertenciaReferencia && (
                 <p
@@ -231,7 +258,7 @@ export default function RegistrarPagoModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || bloqueoReferencia !== null}
               className="rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
               style={{ backgroundColor: TEAL }}
             >

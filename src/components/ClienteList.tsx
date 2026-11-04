@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { clienteService } from '../services/clienteService';
 import type { Cliente } from '../types/Cliente';
 import ClienteFormModal from './ClienteFormModal';
@@ -8,7 +9,132 @@ import NavBar from './NavBar';
 
 const NAVY = '#1E3A5F';
 const TEAL = '#0F766E';
+const TEAL_SUAVE = '#E6F2F1';
 const TAMANO_PAGINA = 10;
+
+/* ---------- Iconos (estilo Lucide, trazo fino, sin dependencias) ---------- */
+
+function Icono({ children, size = 16 }: { children: ReactNode; size?: number }) {
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="shrink-0"
+        >
+            {children}
+        </svg>
+    );
+}
+
+const IconoBuscar = (
+    <Icono>
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.3-4.3" />
+    </Icono>
+);
+
+const IconoMas = (
+    <Icono>
+        <path d="M5 12h14" />
+        <path d="M12 5v14" />
+    </Icono>
+);
+
+const IconoBillete = (
+    <Icono>
+        <rect x="2" y="6" width="20" height="12" rx="2" />
+        <circle cx="12" cy="12" r="2" />
+        <path d="M6 12h.01M18 12h.01" />
+    </Icono>
+);
+
+const IconoDocumento = (
+    <Icono size={14}>
+        <rect x="2" y="5" width="20" height="14" rx="2" />
+        <circle cx="9" cy="11" r="2" />
+        <path d="M6.17 15a3 3 0 0 1 5.66 0" />
+        <path d="M16 10h2" />
+        <path d="M16 14h2" />
+    </Icono>
+);
+
+const IconoTelefono = (
+    <Icono size={14}>
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    </Icono>
+);
+
+const IconoUbicacion = (
+    <Icono size={14}>
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+        <circle cx="12" cy="10" r="3" />
+    </Icono>
+);
+
+const IconoCalendario = (
+    <Icono size={14}>
+        <path d="M8 2v4" />
+        <path d="M16 2v4" />
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <path d="M3 10h18" />
+    </Icono>
+);
+
+const IconoWallet = (
+    <Icono size={14}>
+        <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
+        <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+    </Icono>
+);
+
+const IconoAnterior = (
+    <Icono>
+        <path d="m15 18-6-6 6-6" />
+    </Icono>
+);
+
+const IconoSiguiente = (
+    <Icono>
+        <path d="m9 18 6-6-6-6" />
+    </Icono>
+);
+
+const IconoClientesGrande = (
+    <Icono size={22}>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </Icono>
+);
+
+/* ---------- Auxiliares ---------- */
+
+function iniciales(nombre: string): string {
+    const partes = nombre.trim().split(/\s+/).filter(Boolean);
+    if (partes.length === 0) return '?';
+    if (partes.length === 1) return partes[0].charAt(0).toUpperCase();
+    return (partes[0].charAt(0) + partes[1].charAt(0)).toUpperCase();
+}
+
+function Avatar({ nombre }: { nombre: string }) {
+    return (
+        <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+            style={{ color: TEAL, backgroundColor: TEAL_SUAVE }}
+            aria-hidden="true"
+        >
+            {iniciales(nombre)}
+        </span>
+    );
+}
 
 export default function ClienteList() {
     const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -98,22 +224,26 @@ export default function ClienteList() {
                     <button
                         type="button"
                         onClick={() => setShowForm(true)}
-                        className="w-full sm:w-auto rounded-md px-4 py-2.5 sm:py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                        className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-md px-4 py-2.5 sm:py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
                         style={{ backgroundColor: TEAL }}
                     >
-                        + Nuevo cliente
+                        {IconoMas}
+                        Nuevo cliente
                     </button>
                 </div>
 
                 {/* Buscador */}
-                <div className="mb-6">
+                <div className="relative mb-6 w-full sm:max-w-md">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#9CA3AF]">
+                        {IconoBuscar}
+                    </span>
                     <input
                         type="search"
                         value={textoInput}
                         onChange={(e) => setTextoInput(e.target.value)}
                         placeholder="Buscar por nombre, documento o teléfono"
                         aria-label="Buscar clientes"
-                        className="w-full sm:max-w-md rounded-md border border-[#E2E4E9] bg-white px-3 py-2.5 sm:py-2 text-sm text-[#1B1F2A] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
+                        className="w-full rounded-md border border-[#E2E4E9] bg-white py-2.5 sm:py-2 pl-9 pr-3 text-sm text-[#1B1F2A] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
                     />
                 </div>
 
@@ -139,13 +269,25 @@ export default function ClienteList() {
 
                 {!loading && !error && clientes.length === 0 && !hayBusqueda && (
                     <div className="rounded-lg border border-dashed border-[#E2E4E9] bg-white px-6 py-16 text-center">
+                        <span
+                            className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full"
+                            style={{ color: TEAL, backgroundColor: TEAL_SUAVE }}
+                        >
+                            {IconoClientesGrande}
+                        </span>
                         <p className="text-sm text-[#6B7280]">Todavía no hay clientes registrados.</p>
-                        <p className="text-sm text-[#6B7280] mt-1">Usa "+ Nuevo cliente" para agregar el primero.</p>
+                        <p className="text-sm text-[#6B7280] mt-1">Usa "Nuevo cliente" para agregar el primero.</p>
                     </div>
                 )}
 
                 {!loading && !error && clientes.length === 0 && hayBusqueda && (
                     <div className="rounded-lg border border-dashed border-[#E2E4E9] bg-white px-6 py-16 text-center">
+                        <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#F1F2F5] text-[#9CA3AF]">
+                            <Icono size={22}>
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.3-4.3" />
+                            </Icono>
+                        </span>
                         <p className="text-sm text-[#6B7280]">
                             No hay clientes que coincidan con "{texto}".
                         </p>
@@ -171,41 +313,59 @@ export default function ClienteList() {
                                         key={cliente.id}
                                         className="rounded-lg border border-[#E2E4E9] bg-white p-4"
                                     >
-                                        <p className="font-medium text-[#1B1F2A] break-words">
-                                            {cliente.nombreCompleto}
-                                        </p>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar nombre={cliente.nombreCompleto} />
+                                            <p className="font-medium text-[#1B1F2A] break-words min-w-0">
+                                                {cliente.nombreCompleto}
+                                            </p>
+                                        </div>
 
-                                        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                                        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                                             <div className="min-w-0">
-                                                <dt className="text-xs text-[#6B7280]">Documento</dt>
+                                                <dt className="flex items-center gap-1.5 text-xs text-[#6B7280]">
+                                                    {IconoDocumento}
+                                                    Documento
+                                                </dt>
                                                 <dd
-                                                    className="text-[#1B1F2A] break-words"
+                                                    className="mt-0.5 text-[#1B1F2A] break-words"
                                                     style={{ fontVariantNumeric: 'tabular-nums' }}
                                                 >
                                                     {cliente.numeroDocumento}
                                                 </dd>
                                             </div>
                                             <div className="min-w-0">
-                                                <dt className="text-xs text-[#6B7280]">Teléfono</dt>
+                                                <dt className="flex items-center gap-1.5 text-xs text-[#6B7280]">
+                                                    {IconoTelefono}
+                                                    Teléfono
+                                                </dt>
                                                 <dd
-                                                    className="text-[#1B1F2A] break-words"
+                                                    className="mt-0.5 text-[#1B1F2A] break-words"
                                                     style={{ fontVariantNumeric: 'tabular-nums' }}
                                                 >
                                                     {cliente.telefono}
                                                 </dd>
                                             </div>
                                             <div className="min-w-0 col-span-2">
-                                                <dt className="text-xs text-[#6B7280]">Dirección</dt>
-                                                <dd className="text-[#1B1F2A] break-words">
+                                                <dt className="flex items-center gap-1.5 text-xs text-[#6B7280]">
+                                                    {IconoUbicacion}
+                                                    Dirección
+                                                </dt>
+                                                <dd className="mt-0.5 text-[#1B1F2A] break-words">
                                                     {cliente.direccion || '—'}
                                                 </dd>
                                             </div>
                                             <div className="min-w-0">
-                                                <dt className="text-xs text-[#6B7280]">Registrado</dt>
-                                                <dd className="text-[#1B1F2A]">{cliente.fechaRegistro}</dd>
+                                                <dt className="flex items-center gap-1.5 text-xs text-[#6B7280]">
+                                                    {IconoCalendario}
+                                                    Registrado
+                                                </dt>
+                                                <dd className="mt-0.5 text-[#1B1F2A]">{cliente.fechaRegistro}</dd>
                                             </div>
                                             <div className="min-w-0">
-                                                <dt className="text-xs text-[#6B7280]">Créditos</dt>
+                                                <dt className="flex items-center gap-1.5 text-xs text-[#6B7280]">
+                                                    {IconoWallet}
+                                                    Créditos
+                                                </dt>
                                                 <dd>
                                                     <button
                                                         type="button"
@@ -223,9 +383,10 @@ export default function ClienteList() {
                                         <button
                                             type="button"
                                             onClick={() => setClienteParaCredito(cliente)}
-                                            className="mt-4 w-full rounded-md border py-2.5 text-sm font-medium transition-colors hover:bg-[#F0FDFA]"
+                                            className="mt-4 flex w-full items-center justify-center gap-2 rounded-md border py-2.5 text-sm font-medium transition-colors hover:bg-[#F0FDFA]"
                                             style={{ color: TEAL, borderColor: TEAL }}
                                         >
+                                            {IconoBillete}
                                             Solicitar crédito
                                         </button>
                                     </li>
@@ -237,7 +398,7 @@ export default function ClienteList() {
                         <div className="hidden md:block overflow-x-auto rounded-lg border border-[#E2E4E9] bg-white">
                             <table className="w-full text-left text-sm">
                                 <thead>
-                                    <tr className="border-b border-[#E2E4E9] text-[#6B7280]">
+                                    <tr className="border-b border-[#E2E4E9] bg-[#FAFAFB] text-[#6B7280]">
                                         <th className="px-4 lg:px-5 py-3 font-medium">Nombre</th>
                                         <th className="px-4 lg:px-5 py-3 font-medium">Documento</th>
                                         <th className="px-4 lg:px-5 py-3 font-medium">Teléfono</th>
@@ -251,10 +412,17 @@ export default function ClienteList() {
                                     {clientes.map((cliente, index) => (
                                         <tr
                                             key={cliente.id}
-                                            className={index !== clientes.length - 1 ? 'border-b border-[#EEF0F3]' : ''}
+                                            className={`transition-colors hover:bg-[#FAFAFB] ${
+                                                index !== clientes.length - 1 ? 'border-b border-[#EEF0F3]' : ''
+                                            }`}
                                         >
-                                            <td className="px-4 lg:px-5 py-3 text-[#1B1F2A] font-medium">
-                                                {cliente.nombreCompleto}
+                                            <td className="px-4 lg:px-5 py-3">
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar nombre={cliente.nombreCompleto} />
+                                                    <span className="text-[#1B1F2A] font-medium">
+                                                        {cliente.nombreCompleto}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td
                                                 className="px-4 lg:px-5 py-3 text-[#1B1F2A]"
@@ -288,9 +456,10 @@ export default function ClienteList() {
                                                 <button
                                                     type="button"
                                                     onClick={() => setClienteParaCredito(cliente)}
-                                                    className="text-sm font-medium hover:underline"
+                                                    className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors hover:bg-[#E6F2F1]"
                                                     style={{ color: TEAL }}
                                                 >
+                                                    {IconoBillete}
                                                     Solicitar crédito
                                                 </button>
                                             </td>
@@ -314,8 +483,9 @@ export default function ClienteList() {
                                         type="button"
                                         onClick={() => setPagina((p) => Math.max(p - 1, 0))}
                                         disabled={pagina === 0 || loading}
-                                        className="rounded-md border border-[#E2E4E9] bg-white px-3 py-2 text-sm font-medium text-[#1B1F2A] transition-colors hover:bg-[#F1F2F5] disabled:cursor-default disabled:text-[#9CA3AF] disabled:hover:bg-white"
+                                        className="flex items-center gap-1 rounded-md border border-[#E2E4E9] bg-white py-2 pl-2 pr-3 text-sm font-medium text-[#1B1F2A] transition-colors hover:bg-[#F1F2F5] disabled:cursor-default disabled:text-[#9CA3AF] disabled:hover:bg-white"
                                     >
+                                        {IconoAnterior}
                                         Anterior
                                     </button>
                                     <span
@@ -328,9 +498,10 @@ export default function ClienteList() {
                                         type="button"
                                         onClick={() => setPagina((p) => Math.min(p + 1, totalPaginas - 1))}
                                         disabled={pagina >= totalPaginas - 1 || loading}
-                                        className="rounded-md border border-[#E2E4E9] bg-white px-3 py-2 text-sm font-medium text-[#1B1F2A] transition-colors hover:bg-[#F1F2F5] disabled:cursor-default disabled:text-[#9CA3AF] disabled:hover:bg-white"
+                                        className="flex items-center gap-1 rounded-md border border-[#E2E4E9] bg-white py-2 pl-3 pr-2 text-sm font-medium text-[#1B1F2A] transition-colors hover:bg-[#F1F2F5] disabled:cursor-default disabled:text-[#9CA3AF] disabled:hover:bg-white"
                                     >
                                         Siguiente
+                                        {IconoSiguiente}
                                     </button>
                                 </div>
                             )}

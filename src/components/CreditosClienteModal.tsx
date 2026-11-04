@@ -4,6 +4,7 @@ import type { Cliente } from '../types/Cliente';
 import type { Credito, EstadoCredito } from '../types/Credito';
 import { creditoService } from '../services/creditoService';
 import CreditoDetalleModal from './CreditoDetalleModal';
+import { isAxiosError } from 'axios';
 
 const TEAL = '#0F766E';
 
@@ -22,6 +23,19 @@ function badgeEstadoCredito(estado: EstadoCredito) {
     EN_MORA: 'text-[#B45309]',
   };
   return <span className={`text-xs font-medium ${estilos[estado]}`}>{estado}</span>;
+}
+
+// Si el backend rechaza la acción con 400, el motivo viene como texto en response.data.
+function mensajeDeError(err: unknown, porDefecto: string): string {
+  if (isAxiosError(err)) {
+    if (err.response?.status === 400 && typeof err.response.data === 'string') {
+      return err.response.data;
+    }
+    if (err.response?.status === 403) {
+      return 'Tu usuario no tiene permiso para realizar esta acción.';
+    }
+  }
+  return porDefecto;
 }
 
 export default function CreditosClienteModal({ cliente, onClose, onActualizado }: CreditosClienteModalProps) {
@@ -58,7 +72,7 @@ export default function CreditosClienteModal({ cliente, onClose, onActualizado }
       await creditoService.aprobar(id);
       onActualizado();
     } catch (err) {
-      setError('No se pudo aprobar el crédito. Intenta de nuevo.');
+      setError(mensajeDeError(err, 'No se pudo aprobar el crédito. Intenta de nuevo.'));
       console.error(err);
     } finally {
       setProcesandoId(null);
@@ -72,7 +86,7 @@ export default function CreditosClienteModal({ cliente, onClose, onActualizado }
       await creditoService.rechazar(id);
       onActualizado();
     } catch (err) {
-      setError('No se pudo rechazar el crédito. Intenta de nuevo.');
+      setError(mensajeDeError(err, 'No se pudo rechazar el crédito. Intenta de nuevo.'));
       console.error(err);
     } finally {
       setProcesandoId(null);

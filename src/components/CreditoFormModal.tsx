@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { isAxiosError } from 'axios';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -45,12 +47,13 @@ export default function CreditoFormModal({
   onClose,
   onCreated,
 }: CreditoFormModalProps) {
+  const [errorServidor, setErrorServidor] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-    setError,
   } = useForm<CreditoFormValues>({
     resolver: zodResolver(creditoSchema),
   });
@@ -61,13 +64,19 @@ export default function CreditoFormModal({
   const cuotaEstimada = calcularCuotaEstimada(Number(monto), Number(tasa), Number(plazo));
 
   const onSubmit = async (data: CreditoFormValues) => {
+    setErrorServidor(null);
     try {
       await creditoService.crear({ clienteId, ...data });
       onCreated();
     } catch (err: unknown) {
-      setError('montoSolicitado', {
-        message: 'No se pudo crear el crédito. Verifica los datos e intenta de nuevo.',
-      });
+      // El backend responde 400 con el motivo en texto (por ejemplo, cliente con crédito en mora).
+      if (isAxiosError(err) && err.response?.status === 400 && typeof err.response.data === 'string') {
+        setErrorServidor(err.response.data);
+      } else if (isAxiosError(err) && err.response?.status === 403) {
+        setErrorServidor('Tu usuario no tiene permiso para crear créditos.');
+      } else {
+        setErrorServidor('No se pudo crear el crédito. Verifica los datos e intenta de nuevo.');
+      }
       console.error(err);
     }
   };
@@ -157,6 +166,15 @@ export default function CreditoFormModal({
               <p className="text-xs text-[#6B7280] mt-0.5">
                 Estimado en el navegador. El valor final lo calcula y guarda el servidor.
               </p>
+            </div>
+          )}
+
+          {errorServidor && (
+            <div
+              role="alert"
+              className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]"
+            >
+              {errorServidor}
             </div>
           )}
 
